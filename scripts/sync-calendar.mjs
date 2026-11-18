@@ -37,16 +37,19 @@ function makeRecord(item, startTime, endTime, uid, allDay) {
   const end = asDate(endTime) || start;
   if (!start || !end || end < rangeStart || start > rangeEnd) return null;
 
-  const status = safeText(item.component.getFirstPropertyValue("status")).toUpperCase();
+  const component = item.component || item;
+const status = safeText(component.getFirstPropertyValue("status")).toUpperCase();
   if (status === "CANCELLED") return null;
 
-  const url = safeText(item.component.getFirstPropertyValue("url"));
+  const url = safeText(component.getFirstPropertyValue("url"));
   return {
     id: `${uid || "event"}-${start.toISOString()}`,
     uid: uid || "",
-   title: safeText(item.component.getFirstPropertyValue("summary")) || "Untitled event",
-description: safeText(item.component.getFirstPropertyValue("description")),
-location: safeText(item.component.getFirstPropertyValue("location")),
+   
+title: safeText(component.getFirstPropertyValue("summary")) || "Untitled event",
+description: safeText(component.getFirstPropertyValue("description")),
+location: safeText(component.getFirstPropertyValue("location")),
+
     url,
     start: start.toISOString(),
     end: end.toISOString(),
