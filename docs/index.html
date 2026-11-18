@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canyon Church Events</title>
+<style>
+:root {
+  --canyon-blue: #315f78;
+  --canyon-blue-dark: #23485d;
+  --ink: #263238;
+  --muted: #68777f;
+  --line: #e4e9ec;
+  --surface: #ffffff;
+  --soft: #f5f8fa;
+  --today: #eaf2f6;
+  --radius: 14px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: transparent; }
+.calendar { width: 100%; max-width: 1100px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 22px; border-bottom:1px solid var(--line); }
+.brand { font-size:12px; letter-spacing:.12em; text-transform:uppercase; font-weight:750; color:var(--canyon-blue); margin-bottom:5px; }
+.month { font-size:clamp(21px,3vw,29px); font-weight:750; letter-spacing:-.035em; }
+.controls { display:flex; align-items:center; gap:8px; }
+button { font:inherit; cursor:pointer; }
+.nav, .today-btn { border:1px solid var(--line); color:var(--ink); background:#fff; border-radius:9px; min-width:38px; height:38px; }
+.nav:hover, .today-btn:hover { background:var(--soft); }
+.today-btn { padding:0 12px; font-size:13px; font-weight:650; }
+.weekdays, .days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
+.weekdays { background:var(--soft); border-bottom:1px solid var(--line); }
+.weekday { padding:11px 8px; color:var(--muted); font-size:11px; font-weight:750; letter-spacing:.07em; text-align:center; }
+.day { min-height:116px; padding:8px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); min-width:0; }
+.day:nth-child(7n) { border-right:0; }
+.day.outside { background:#fafbfc; }
+.day-number { width:27px; height:27px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px; font-weight:650; color:#53636b; margin-bottom:5px; }
+.day.today .day-number { color:#fff; background:var(--canyon-blue); }
+.event-list { display:flex; flex-direction:column; gap:4px; }
+.event { display:block; width:100%; text-align:left; border:0; border-left:3px solid var(--canyon-blue); background:#edf3f6; color:#27485a; padding:5px 6px; border-radius:4px; font-size:11px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.event:hover { background:#dce9ef; }
+.more { font-size:10px; color:var(--muted); padding:2px 4px; }
+.status { padding:12px 18px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; gap:12px; border-top:1px solid var(--line); }
+dialog { border:0; border-radius:14px; width:min(480px,calc(100% - 28px)); padding:0; box-shadow:0 18px 60px #102a3a33; color:var(--ink); }
+dialog::backdrop { background:#102a3a66; }
+.modal { padding:23px; }
+.modal h2 { margin:0 28px 10px 0; font-size:22px; line-height:1.2; }
+.modal p { color:#53636b; font-size:14px; line-height:1.55; white-space:pre-wrap; }
+.modal-meta { font-size:13px; color:var(--muted); margin:8px 0; }
+.close { float:right; border:0; background:transparent; font-size:24px; color:var(--muted); }
+.register { display:inline-block; margin-top:10px; background:var(--canyon-blue); color:white; text-decoration:none; border-radius:8px; padding:11px 16px; font-size:13px; font-weight:700; }
+.register:hover { background:var(--canyon-blue-dark); }
+@media(max-width:650px) {
+ .topbar { padding:15px 13px; }
+ .brand { font-size:10px; }
+ .day { min-height:82px; padding:5px 3px; }
+ .weekday { padding:9px 1px; font-size:9px; }
+ .day-number { width:23px; height:23px; font-size:11px; margin:0 auto 4px; }
+ .event { font-size:9px; padding:4px 3px; border-left-width:2px; }
+ .more { font-size:9px; padding:1px; }
+ .today-btn { display:none; }
+ .status { font-size:10px; }
+}
+@media(max-width:390px) {
+ .day { min-height:70px; }
+ .event { white-space:normal; max-height:31px; overflow:hidden; }
+}
+</style>
+</head>
+<body>
+<div class="calendar" id="calendar">
+  <header class="topbar">
+    <div><div class="brand">Canyon Church</div><div class="month" id="month-label">Loading calendar…</div></div>
+    <div class="controls">
+      <button class="today-btn" id="today" type="button">Today</button>
+      <button class="nav" id="prev" type="button" aria-label="Previous month">‹</button>
+      <button class="nav" id="next" type="button" aria-label="Next month">›</button>
+    </div>
+  </header>
+  <div class="weekdays" aria-hidden="true">
+    <div class="weekday">SUN</div><div class="weekday">MON</div><div class="weekday">TUE</div><div class="weekday">WED</div><div class="weekday">THU</div><div class="weekday">FRI</div><div class="weekday">SAT</div>
+  </div>
+  <div class="days" id="days" aria-live="polite"></div>
+  <footer class="status"><span id="status">Loading events…</span><span id="updated"></span></footer>
+</div>
+<dialog id="event-dialog"><div class="modal">
+  <button class="close" id="close" aria-label="Close">&times;</button>
+  <h2 id="event-title"></h2><div class="modal-meta" id="event-date"></div>
+  <div class="modal-meta" id="event-location"></div><p id="event-description"></p>
+  <a class="register" id="event-link" href="#" target="_blank" rel="noopener" hidden>Event details / registration</a>
+</div></dialog>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const monthLabel = $("month-label"), daysEl = $("days"), statusEl = $("status"), updatedEl = $("updated");
+  let events = [], current = new Date(); current = new Date(current.getFullYear(), current.getMonth(), 1);
+  let updatedAt = null;
+  const fmtMonth = new Intl.DateTimeFormat(undefined, {month:"long", year:"numeric"});
+  const fmtDate = new Intl.DateTimeFormat(undefined, {weekday:"long", month:"long", day:"numeric", year:"numeric"});
+  const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+  function openEvent(ev) {
+    $("event-title").textContent = ev.title || "Church event";
+    const start = new Date(ev.start), end = new Date(ev.end);
+    let dateText = ev.allDay ? fmtDate.format(start) + " · All day" : fmtDate.format(start) + " · " + start.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+    if (!ev.allDay && end.toDateString() === start.toDateString()) dateText += " – " + end.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+    $("event-date").textContent = dateText;
+    $("event-location").textContent = ev.location || "";
+    $("event-description").textContent = ev.description || "";
+    const link = $("event-link");
+    if (ev.url && /^https?:\/\//i.test(ev.url)) { link.href = ev.url; link.hidden = false; }
+    else link.hidden = true;
+    $("event-dialog").showModal();
+  }
+  function render() {
+    monthLabel.textContent = fmtMonth.format(current);
+    daysEl.innerHTML = "";
+    const first = new Date(current.getFullYear(), current.getMonth(), 1);
+    const start = new Date(first); start.setDate(first.getDate() - first.getDay());
+    const today = new Date();
+    for (let i=0;i<42;i++) {
+      const day = new Date(start); day.setDate(start.getDate()+i);
+      const nextDay = new Date(day); nextDay.setDate(day.getDate()+1);
+      const cell = document.createElement("div");
+      cell.className = "day" + (day.getMonth()!==current.getMonth() ? " outside" : "") + (sameDay(day,today) ? " today" : "");
+      const number = document.createElement("div"); number.className="day-number"; number.textContent=day.getDate(); cell.append(number);
+      const list = document.createElement("div"); list.className="event-list";
+      const dayEvents = events.filter(ev => new Date(ev.start) < nextDay && new Date(ev.end) > day).sort((a,b)=>new Date(a.start)-new Date(b.start));
+      dayEvents.slice(0,3).forEach(ev => {
+        const btn = document.createElement("button"); btn.type="button"; btn.className="event";
+        btn.textContent = ev.allDay ? ev.title : new Date(ev.start).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) + " " + ev.title;
+        btn.title=ev.title; btn.addEventListener("click",()=>openEvent(ev)); list.append(btn);
+      });
+      if (dayEvents.length>3) { const more=document.createElement("div"); more.className="more"; more.textContent=`+${dayEvents.length-3} more`; list.append(more); }
+      cell.append(list); daysEl.append(cell);
+    }
+  }
+  async function load() {
+    try {
+      const res = await fetch("./events.json?refresh="+Date.now(), {cache:"no-store"});
+      if (!res.ok) throw new Error("Calendar data is not published yet.");
+      const data = await res.json(); events = Array.isArray(data.events) ? data.events : [];
+      updatedAt = data.updatedAt ? new Date(data.updatedAt) : null;
+      statusEl.textContent = `${events.length} upcoming event${events.length===1?"":"s"}`;
+      updatedEl.textContent = updatedAt ? "Feed refreshed " + updatedAt.toLocaleDateString() : "";
+      render();
+    } catch (err) {
+      statusEl.textContent = "Calendar is temporarily unavailable. Please check back soon.";
+      console.error(err);
+    }
+  }
+  $("prev").addEventListener("click",()=>{current.setMonth(current.getMonth()-1);render();});
+  $("next").addEventListener("click",()=>{current.setMonth(current.getMonth()+1);render();});
+  $("today").addEventListener("click",()=>{current=new Date();current=new Date(current.getFullYear(),current.getMonth(),1);render();});
+  $("close").addEventListener("click",()=>$("event-dialog").close());
+  $("event-dialog").addEventListener("click",e=>{if(e.target===$("event-dialog")) $("event-dialog").close();});
+  load();
+})();
+</script>
+</body>
+</html>

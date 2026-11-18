@@ -1,0 +1,11 @@
+{
+  "name": "canyon-church-calendar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-calendar.mjs"
+  },
+  "dependencies": {
+    "ical.js": "^2.2.1"
+  }
+}
